@@ -136,7 +136,14 @@ object SlickBuild extends Build {
       // Workaround for sbt bug: Without a testGrouping for all test configs,
       // the wrong tests are run
       testGrouping in DocTest <<= definedTests in DocTest map partitionTests,
-      parallelExecution in Test := false
+      parallelExecution in Test := false,
+      compile in Test ~= { a =>
+        // Delete classes in "compile" packages after compiling.
+        // These are used for compile-time tests and should be recompiled every time.
+        val products = a.relations.allProducts.toSeq ** new SimpleFileFilter(_.getParentFile.getName == "compile")
+        IO.delete(products.get)
+        a
+      }
     )
   ).configs(DocTest).settings(inConfig(DocTest)(Defaults.testSettings): _*).settings(
     unmanagedSourceDirectories in DocTest <+= (baseDirectory in slickProject) { _ / "src/sphinx/code" }
