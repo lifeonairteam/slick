@@ -70,6 +70,9 @@ object Shape extends ShapeLowPriority {
     def toNode(value: Mixed): Node =
       value.shape.toNode(value.value.asInstanceOf[value.shape.Mixed])
   }
+
+  @inline implicit def queryShape[M, U]: Shape[ShapeLevel.Nested, Query[M, U], Seq[U], Query[M, U]] =
+    repShape.asInstanceOf[Shape[ShapeLevel.Nested, Query[M, U], Seq[U], Query[M, U]]]
 }
 
 class ShapeLowPriority extends ShapeLowPriority2 {
