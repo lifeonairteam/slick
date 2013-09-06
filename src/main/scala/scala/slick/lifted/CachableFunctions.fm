@@ -1,0 +1,12 @@
+package scala.slick.lifted
+
+import scala.slick.profile.BasicProfile
+
+trait CachableFunctions extends CachableLowPriority {
+<#list 2..22 as i>
+  implicit def function${i}IsCachable[<#list 1..i as j>A${j}, </#list>B <: Rep[_], P, U](implicit ashape: Shape[ShapeLevel.Columns, (<#list 1..i as j>A${j}<#if i != j>, </#if></#list>), P, (<#list 1..i as j>A${j}<#if i != j>, </#if></#list>)], pshape: Shape[ShapeLevel.Columns, P, P, _], bexe: Executable[B, U]): Cachable[(<#list 1..i as j>A${j}<#if i != j>, </#if></#list>) => B, CachedFunction[(<#list 1..i as j>A${j}<#if i != j>, </#if></#list>) => B, (<#list 1..i as j>A${j}<#if i != j>, </#if></#list>), P, B, U]] = new Cachable[(<#list 1..i as j>A${j}<#if i != j>, </#if></#list>) => B, CachedFunction[(<#list 1..i as j>A${j}<#if i != j>, </#if></#list>) => B, (<#list 1..i as j>A${j}<#if i != j>, </#if></#list>), P, B, U]] {
+    def cached(raw: (<#list 1..i as j>A${j}<#if i != j>, </#if></#list>) => B, driver: BasicProfile) =
+      new CachedFunction[(<#list 1..i as j>A${j}<#if i != j>, </#if></#list>) => B, (<#list 1..i as j>A${j}<#if i != j>, </#if></#list>), P, B, U](raw, ((f: (<#list 1..i as j>A${j}<#if i != j>, </#if></#list>) => B) => f.tupled), pshape.asInstanceOf[Shape[ShapeLevel.Columns, P, P, (<#list 1..i as j>A${j}<#if i != j>, </#if></#list>)]], driver)
+  }
+</#list>
+}

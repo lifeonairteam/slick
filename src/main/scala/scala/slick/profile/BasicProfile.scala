@@ -18,19 +18,6 @@ trait BasicProfile extends BasicInvokerComponent with BasicExecutorComponent { d
   final val capabilities: Set[Capability] = computeCapabilities
   protected def computeCapabilities: Set[Capability] = Set.empty
 
-  /** The type of a pre-compiled parameterized query */
-  type ParameterizedQuery[P, R] <: (P => AppliedQuery[R])
-
-  /** The type of a pre-compiled applied query */
-  type AppliedQuery[R] <: AppliedQueryDef[R]
-
-  trait AppliedQueryDef[R] {
-    def tree: Node
-    def param: Any
-  }
-
-  def compileParameterizedQuery[P, R](q: Query[_, R]): ParameterizedQuery[P, R]
-
   /** The type of a schema description (DDL) */
   type SchemaDescription <: SchemaDescriptionDef
 
@@ -55,8 +42,8 @@ trait BasicProfile extends BasicInvokerComponent with BasicExecutorComponent { d
     implicit def ddlToDDLInvoker(d: SchemaDescription): DDLInvoker
 
     implicit def queryToQueryExecutor[E, U](q: Query[E, U]): QueryExecutor[Seq[U]] = createQueryExecutor[Seq[U]](queryCompiler.run(q.toNode).tree, ())
-    implicit def appliedQueryToQueryExecutor[R](q: AppliedQuery[R]): QueryExecutor[Seq[R]] = createQueryExecutor[Seq[R]](q.tree, q.param)
     implicit def shapedValueToQueryExecutor[T, U](u: ShapedValue[T, U]): QueryExecutor[Seq[U]] = createQueryExecutor[Seq[U]](queryCompiler.run(u.toNode).tree, ())
+    implicit def runnableCachedToQueryExecutor[RU](c: RunnableCached[_, RU]): QueryExecutor[RU] = createQueryExecutor[RU](c.tree, c.param)
     // We can't use this direct way due to SI-3346
     def recordToQueryExecutor[M, R](q: M)(implicit shape: Shape[_ <: ShapeLevel.Flat, M, R, _]): QueryExecutor[R] = createQueryExecutor[R](queryCompiler.run(shape.toNode(q)).tree, ())
     implicit final def recordToUnshapedQueryExecutor[M <: Rep[_]](q: M): UnshapedQueryExecutor[M] = new UnshapedQueryExecutor[M](q)
@@ -96,18 +83,6 @@ trait BasicDriver extends BasicProfile {
       cl.substring(19, cl.length-1)
     else super.toString
   }
-}
-
-/** Standard implementations of parameterized queries */
-trait StandardParameterizedQueries { driver: BasicDriver =>
-  type ParameterizedQuery[P, R] = ParameterizedQueryImpl[P, R]
-  type AppliedQuery[R] = AppliedQueryImpl[R]
-
-  class ParameterizedQueryImpl[P, R](val tree: Node) extends (P => AppliedQueryImpl[R]) {
-    def apply(param: P) = new AppliedQueryImpl[R](tree, param)
-  }
-
-  class AppliedQueryImpl[R](val tree: Node, val param: Any) extends AppliedQueryDef[R]
 }
 
 trait BasicInvokerComponent { driver: BasicDriver =>

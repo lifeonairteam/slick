@@ -10,6 +10,8 @@ trait Aliases {
   val Query = lifted.Query
   type TableQuery[+E <: AbstractTable[_], U] = lifted.TableQuery[E, U]
   val TableQuery = lifted.TableQuery
+  type Cached[T] = lifted.Cached[T]
+  val Cached = lifted.Cached
   type Column[T] = lifted.Column[T]
   type ConstColumn[T] = lifted.ConstColumn[T]
   val ConstColumn = lifted.ConstColumn

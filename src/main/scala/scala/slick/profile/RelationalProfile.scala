@@ -38,11 +38,11 @@ trait RelationalProfile extends BasicProfile with RelationalTableComponent
   class TableQueryExtensionMethods[T <: Table[_], U](val q: TableQuery[T, U]) {
     def ddl: SchemaDescription = buildTableSchemaDescription(q.unpackable.value)
 
-    /** Create a ParameterizedQuery which selects all rows where the specified
+    /** Create a `Cached` query which selects all rows where the specified
       * key matches the parameter value. */
-    def findBy[P](f: (T => Column[P]))(implicit tm: TypedType[P]): ParameterizedQuery[P, U] = {
+    def findBy[P](f: (T => Column[P]))(implicit tm: TypedType[P]): CachedFunction[Column[P] => Query[T, U], Column[P], P, Query[T, U], Seq[U]] = {
       import driver.Implicit._
-      Parameters[P].flatMap { p => q.filter(table => Library.==.column[Boolean](f(table).toNode, p.toNode)) }
+      Cached { (p: Column[P]) => q.filter(table => Library.==.column[Boolean](f(table).toNode, p.toNode)) }
     }
   }
 }
