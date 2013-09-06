@@ -4,6 +4,7 @@ import scala.language.implicitConversions
 import scala.annotation.implicitNotFound
 import scala.slick.ast.Node
 import scala.slick.profile.BasicProfile
+import scala.slick.compiler.QueryCompiler
 
 /** A possibly parameterized query that will be cached for repeated efficient
   * execution without having to recompile it every time. The compiled state
@@ -39,15 +40,22 @@ object Cached {
     cachable.cached(raw, driver)
 }
 
-class CachedFunction[F, PT, PU, R <: Rep[_], RU](val extract: F, val tuple: F => PT => R, val pshape: Shape[ShapeLevel.Columns, PU, PU, PT], val driver: BasicProfile) extends Cached[F] {
+trait CompilingCached { this: Cached[_] =>
+  def compile(qc: QueryCompiler): Node
+  lazy val compiledQuery = compile(driver.queryCompiler)
+  lazy val compiledUpdate = compile(driver.updateCompiler)
+  lazy val compiledDelete = compile(driver.deleteCompiler)
+}
+
+class CachedFunction[F, PT, PU, R <: Rep[_], RU](val extract: F, val tuple: F => PT => R, val pshape: Shape[ShapeLevel.Columns, PU, PU, PT], val driver: BasicProfile) extends Cached[F] with CompilingCached {
   /** Create an applied `Cached` value for this cached function. All applied
     * values share their compilation state with the original cached function. */
   def apply(p: PU) = new AppliedCachedFunction[PU, R, RU](p, this, driver)
 
-  lazy val tree: Node = {
+  def compile(qc: QueryCompiler): Node = {
     val params: PT = pshape.buildParams(_.asInstanceOf[PU])
     val result: R = tuple(extract).apply(params)
-    driver.queryCompiler.run(result.toNode).tree
+    qc.run(result.toNode).tree
   }
 
   def applied(param: PU): R = tuple(extract).apply(pshape.pack(param))
@@ -56,17 +64,21 @@ class CachedFunction[F, PT, PU, R <: Rep[_], RU](val extract: F, val tuple: F =>
 /** A cached value that can be executed to obtain its result. */
 trait RunnableCached[R, RU] extends Cached[R] {
   def param: Any
-  def tree: Node
+  def compiledQuery: Node
+  def compiledUpdate: Node
+  def compiledDelete: Node
 }
 
 class AppliedCachedFunction[PU, R <: Rep[_], RU](val param: PU, function: CachedFunction[_, _, PU, R, RU], val driver: BasicProfile) extends RunnableCached[R, RU] {
   lazy val extract: R = function.applied(param)
-  def tree = function.tree
+  def compiledQuery = function.compiledQuery
+  def compiledUpdate = function.compiledUpdate
+  def compiledDelete = function.compiledDelete
 }
 
-class CachedExecutable[R <: Rep[_], RU](val extract: R, val driver: BasicProfile) extends RunnableCached[R, RU] {
+class CachedExecutable[R <: Rep[_], RU](val extract: R, val driver: BasicProfile) extends RunnableCached[R, RU] with CompilingCached {
   def param = ()
-  lazy val tree = driver.queryCompiler.run(extract.toNode).tree
+  def compile(qc: QueryCompiler): Node = qc.run(extract.toNode).tree
 }
 
 /** Typeclass for types that can be executed as queries. This encompasses

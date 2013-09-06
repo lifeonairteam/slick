@@ -43,7 +43,7 @@ trait BasicProfile extends BasicInvokerComponent with BasicExecutorComponent { d
 
     implicit def queryToQueryExecutor[E, U](q: Query[E, U]): QueryExecutor[Seq[U]] = createQueryExecutor[Seq[U]](queryCompiler.run(q.toNode).tree, ())
     implicit def shapedValueToQueryExecutor[T, U](u: ShapedValue[T, U]): QueryExecutor[Seq[U]] = createQueryExecutor[Seq[U]](queryCompiler.run(u.toNode).tree, ())
-    implicit def runnableCachedToQueryExecutor[RU](c: RunnableCached[_, RU]): QueryExecutor[RU] = createQueryExecutor[RU](c.tree, c.param)
+    implicit def runnableCachedToQueryExecutor[RU](c: RunnableCached[_, RU]): QueryExecutor[RU] = createQueryExecutor[RU](c.compiledQuery, c.param)
     // We can't use this direct way due to SI-3346
     def recordToQueryExecutor[M, R](q: M)(implicit shape: Shape[_ <: ShapeLevel.Flat, M, R, _]): QueryExecutor[R] = createQueryExecutor[R](queryCompiler.run(shape.toNode(q)).tree, ())
     implicit final def recordToUnshapedQueryExecutor[M <: Rep[_]](q: M): UnshapedQueryExecutor[M] = new UnshapedQueryExecutor[M](q)
@@ -65,6 +65,12 @@ trait BasicProfile extends BasicInvokerComponent with BasicExecutorComponent { d
 
   /** The compiler used for queries */
   def queryCompiler: QueryCompiler
+
+  /** The compiler used for updates */
+  def updateCompiler: QueryCompiler
+
+  /** The compiler used for deleting data */
+  def deleteCompiler: QueryCompiler
 
   /** The compiler used for inserting data */
   def insertCompiler: QueryCompiler
