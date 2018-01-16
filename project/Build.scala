@@ -12,7 +12,7 @@ import com.novocode.ornate.sbtplugin.OrnatePlugin.autoImport._
 
 object SlickBuild extends Build {
 
-  val slickVersion = "3.2.1-TMNOW20180116"
+  val slickVersion = "3.2.1-TMNOW20180116b"
   val binaryCompatSlickVersion = "3.2.1" // Slick base version for binary compatibility checks
   val scalaVersions = Seq("2.11.8", "2.12.0")
 
